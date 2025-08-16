@@ -28,7 +28,12 @@ import warnings
 import geocoder
 import requests
 from pytz import timezone, utc
-from timezonefinder import TimezoneFinder
+
+try:
+    from timezonefinder import TimezoneFinder
+except Exception:  # pragma: no cover - optional dependency
+    TimezoneFinder = None
+
 #import pandas as pd
 import csv
 import numpy as np
@@ -313,6 +318,11 @@ def get_place_timezone_offset(latitude, longitude):
         @param longitude: longitude of the place
         @return [city,latitude,longitude,time_zone_offset]
     """
+    if TimezoneFinder is None:
+        warnings.warn(
+            "timezonefinder is not installed; returning default offset +5.0"
+        )
+        return 5.0
     try:
         tf = TimezoneFinder()
         today = datetime.datetime.now()
@@ -320,12 +330,13 @@ def get_place_timezone_offset(latitude, longitude):
         # ATTENTION: tz_target could be None! handle error case
         today_target = tz_target.localize(today)
         today_utc = utc.localize(today)
-        tz_offset = (today_utc - today_target).total_seconds() / 3600.0 # in hours
+        tz_offset = (today_utc - today_target).total_seconds() / 3600.0  # in hours
         #print('timezone offset',tz_offset)
         return tz_offset
-    except Exception as err:        
-        print('Error in get_place_timezone_offset',err)
-        print('WARNING: Time Zone returned as default +5.0. Need to change it')
+    except Exception as err:
+        warnings.warn(
+            f"Error in get_place_timezone_offset {err}. Returning default +5.0"
+        )
         return 5.0
 def get_house_to_planet_dict_from_planet_to_house_dict(planet_to_house_dict):
     """
